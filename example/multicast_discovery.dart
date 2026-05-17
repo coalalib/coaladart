@@ -4,9 +4,20 @@ import 'package:coala/coala.dart';
 
 Future<void> main(List<String> args) async {
   final port = args.contains('--ephemeral') ? 0 : Coala.defaultPort;
+  final interfaceName = _optionValue(args, '--interface');
+  final multicastInterface = interfaceName == null
+      ? null
+      : await _networkInterfaceNamed(interfaceName);
+  if (interfaceName != null && multicastInterface == null) {
+    stderr.writeln('Network interface "$interfaceName" was not found.');
+    exitCode = 64;
+    return;
+  }
+
   final coala = Coala(
     transport: CoalaUdpTransport(
       port: port,
+      multicastInterface: multicastInterface,
       reuseAddress: true,
       reusePort: Platform.isMacOS || Platform.isLinux,
     ),
@@ -30,6 +41,12 @@ Future<void> main(List<String> args) async {
 
   print('Coala UDP started on port $localPort.');
   print('Local IPv4 addresses: ${localAddresses.join(', ')}');
+  if (multicastInterface != null) {
+    print(
+      'Multicast interface: ${multicastInterface.name} '
+      '(${_interfaceIPv4Addresses(multicastInterface).join(', ')})',
+    );
+  }
   print(
     'Searching peers with multicast ${CoalaDefaults.multicastAddress}:${Coala.defaultPort}...',
   );
@@ -65,6 +82,30 @@ String awaitHostName() {
   }
 }
 
+String? _optionValue(List<String> args, String option) {
+  final index = args.indexOf(option);
+  if (index == -1) {
+    return null;
+  }
+  if (index == args.length - 1 || args[index + 1].startsWith('--')) {
+    throw ArgumentError('Missing value for $option');
+  }
+  return args[index + 1];
+}
+
+Future<NetworkInterface?> _networkInterfaceNamed(String name) async {
+  final interfaces = await NetworkInterface.list(
+    includeLoopback: true,
+    type: InternetAddressType.IPv4,
+  );
+  for (final interface in interfaces) {
+    if (interface.name == name) {
+      return interface;
+    }
+  }
+  return null;
+}
+
 Future<Set<String>> _localIPv4Addresses() async {
   final interfaces = await NetworkInterface.list(
     includeLoopback: true,
@@ -75,3 +116,8 @@ Future<Set<String>> _localIPv4Addresses() async {
       for (final address in interface.addresses) address.address,
   };
 }
+
+Iterable<String> _interfaceIPv4Addresses(NetworkInterface interface) =>
+    interface.addresses
+        .where((address) => address.type == InternetAddressType.IPv4)
+        .map((address) => address.address);

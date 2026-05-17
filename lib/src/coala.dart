@@ -28,12 +28,14 @@ class CoalaUdpTransport extends CoalaTransport {
   const CoalaUdpTransport({
     this.port = CoalaDefaults.defaultPort,
     this.bindAddress,
+    this.multicastInterface,
     this.reuseAddress = true,
     this.reusePort = false,
   });
 
   final int port;
   final InternetAddress? bindAddress;
+  final NetworkInterface? multicastInterface;
   final bool reuseAddress;
   final bool reusePort;
 }
@@ -110,8 +112,13 @@ class Coala implements CoalaResourceOwner {
           reuseAddress: transport.reuseAddress,
           reusePort: transport.reusePort,
         );
+        final multicastGroup = InternetAddress(CoalaDefaults.multicastAddress);
+        final multicastInterface = transport.multicastInterface;
+        if (multicastInterface != null) {
+          _configureOutgoingMulticastInterface(socket, multicastInterface);
+        }
         try {
-          socket.joinMulticast(InternetAddress(CoalaDefaults.multicastAddress));
+          socket.joinMulticast(multicastGroup, multicastInterface);
         } on Object catch (error) {
           logWarning('Could not join CoAP multicast group: $error');
         }
@@ -373,6 +380,34 @@ class Coala implements CoalaResourceOwner {
       throw CoalaException('Could not resolve host $host.');
     }
     return addresses.first;
+  }
+
+  void _configureOutgoingMulticastInterface(
+    RawDatagramSocket socket,
+    NetworkInterface interface,
+  ) {
+    final address = interface.addresses
+        .where((address) => address.type == InternetAddressType.IPv4)
+        .firstOrNull;
+    if (address == null) {
+      logWarning(
+        'Could not configure multicast interface ${interface.name}: no IPv4 address',
+      );
+      return;
+    }
+    try {
+      socket.setRawOption(
+        RawSocketOption(
+          RawSocketOption.levelIPv4,
+          RawSocketOption.IPv4MulticastInterface,
+          Uint8List.fromList(address.rawAddress),
+        ),
+      );
+    } on Object catch (error) {
+      logWarning(
+        'Could not configure multicast interface ${interface.name}: $error',
+      );
+    }
   }
 }
 
