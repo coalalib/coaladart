@@ -1,0 +1,16 @@
+name: coala
+description: Pure Dart and Flutter-compatible CoAP library migrated from Coala Swift.
+version: 0.1.0
+repository: https://github.com/ndmsystems/Coala-Swift
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  crypto: ^3.0.7
+  cryptography: ^2.9.0
+  pointycastle: ^4.0.0
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.26.0
