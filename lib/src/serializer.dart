@@ -27,7 +27,18 @@ class CoapDeserializationException implements Exception {
 class CoapSerializer {
   static const version = 1;
 
-  static Uint8List encode(CoapMessage message) {
+  static Uint8List encode(
+    CoapMessage message, {
+    bool addChecksumIfNeeded = false,
+  }) {
+    if (addChecksumIfNeeded && message.addChecksumOnSend) {
+      message = message.copy()
+        ..setStringOption(
+          CoapOptionNumber.checksum,
+          checksumForMessage(message),
+        );
+    }
+
     final token = message.token;
     final tokenLength = token?.length ?? 0;
     if (tokenLength > CoapToken.maxLength) {
@@ -151,7 +162,47 @@ class CoapSerializer {
       pos += length;
       previousNumber = number;
     }
+    _verifyChecksum(message);
     return message;
+  }
+
+  static String checksumForMessage(CoapMessage message) {
+    final checksumMessage = message.copy()
+      ..removeOption(CoapOptionNumber.checksum);
+    return _crc32Hex(encode(checksumMessage));
+  }
+
+  static void _verifyChecksum(CoapMessage message) {
+    final expected = message
+        .getStringOptions(CoapOptionNumber.checksum)
+        .firstOrNull;
+    if (expected == null) {
+      return;
+    }
+    final computed = checksumForMessage(message);
+    if (expected.toLowerCase() != computed) {
+      throw CoapDeserializationException(
+        'Checksum mismatch: expected $expected got $computed.',
+      );
+    }
+  }
+
+  static String _crc32Hex(List<int> data) =>
+      _crc32(data).toRadixString(16).padLeft(8, '0');
+
+  static int _crc32(List<int> data) {
+    var crc = 0xffffffff;
+    for (final byte in data) {
+      crc = (crc ^ (byte & 0xff)) & 0xffffffff;
+      for (var i = 0; i < 8; i += 1) {
+        if ((crc & 1) == 1) {
+          crc = ((crc >> 1) ^ 0xedb88320) & 0xffffffff;
+        } else {
+          crc = (crc >> 1) & 0xffffffff;
+        }
+      }
+    }
+    return (~crc) & 0xffffffff;
   }
 
   static _OptionField _optionField(int value) {

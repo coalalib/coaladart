@@ -33,6 +33,7 @@ class CoapOptionNumber implements Comparable<CoapOptionNumber> {
   static const sessionNotFound = CoapOptionNumber(4001, 'sessionNotFound');
   static const sessionExpired = CoapOptionNumber(4003, 'sessionExpired');
   static const coapsUri = CoapOptionNumber(4005, 'coapsUri');
+  static const checksum = CoapOptionNumber(4006, 'checksum');
 
   static const known = <int, CoapOptionNumber>{
     1: ifMatch,
@@ -60,6 +61,7 @@ class CoapOptionNumber implements Comparable<CoapOptionNumber> {
     4001: sessionNotFound,
     4003: sessionExpired,
     4005: coapsUri,
+    4006: checksum,
   };
 
   factory CoapOptionNumber.fromValue(int value) =>

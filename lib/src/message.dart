@@ -72,6 +72,7 @@ class CoapMessage {
       ..address = address
       ..proxyViaAddress = proxyViaAddress
       ..peerPublicKey = peerPublicKey == null ? null : copyBytes(peerPublicKey!)
+      ..addChecksumOnSend = addChecksumOnSend
       .._onResponse = _onResponse;
     for (final option in options) {
       copied.options.add(CoapMessageOption(option.number, option.value));
@@ -87,6 +88,7 @@ class CoapMessage {
   Address? address;
   Address? proxyViaAddress;
   Uint8List? peerPublicKey;
+  bool addChecksumOnSend = false;
   final List<CoapMessageOption> options = [];
 
   CoalaResponseHandler? _onResponse;

@@ -194,7 +194,7 @@ class Coala implements CoalaResourceOwner {
     try {
       await layerStack.runOutbound(this, processed, context);
       address = context.toAddress;
-      final data = CoapSerializer.encode(processed);
+      final data = CoapSerializer.encode(processed, addChecksumIfNeeded: true);
       final transport = _transport;
       switch (transport) {
         case CoalaUdpTransport():
@@ -1527,7 +1527,8 @@ class ArqLayer implements InLayer, OutLayer {
           ..token = token
           ..address = originalMessage.address
           ..proxyViaAddress = originalMessage.proxyViaAddress
-          ..peerPublicKey = originalMessage.peerPublicKey;
+          ..peerPublicKey = originalMessage.peerPublicKey
+          ..addChecksumOnSend = originalMessage.addChecksumOnSend;
     for (final option in originalMessage.options) {
       blockMessage.setOption(option.number, option.value);
     }
